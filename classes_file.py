@@ -74,6 +74,17 @@ class activation_ReLU:
                 if(self.inputs[i][j] < 0):
                     self.dinputs[i][j] = 0
 
+class activation_sigmoid:
+
+    def forward(self, inputs):
+        self.inputs = inputs
+
+        self.outputs = 1 / (1 + np.exp(-inputs) )
+
+    def backward(self, dvalues):
+
+        self.dinputs = self.outputs * (1 - self.outputs)
+
 
 
 class custom_loss_abs:
