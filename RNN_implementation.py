@@ -75,7 +75,4 @@ for epoch in range(0,epochs):
 
 
 
-
-
-
 #%%
