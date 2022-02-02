@@ -43,18 +43,18 @@ X_train, Y_train = model.data_shuffler(X_train,Y_train)
 X_test = np.array(X_test)
 Y_test = np.array(Y_test)
 
-model.add_layer(cls.layer(28*28,128,l2_biases_regularization=1e-3,l2_weights_regularization=1e-3),trainable_layer=True)
-model.add_layer(cls.activation_ReLU())
-model.add_layer(cls.layer(128,64,l2_biases_regularization=1e-3,l2_weights_regularization=1e-3),trainable_layer=True)
-model.add_layer(cls.activation_ReLU())
-model.add_layer(cls.layer(64,10),trainable_layer=True)
+model.add_layer(cls.Layer(28 * 28, 128, l2_biases_regularization=1e-3, l2_weights_regularization=1e-3), trainable_layer=True)
+model.add_layer(cls.ActivationReLU())
+model.add_layer(cls.Layer(128, 64, l2_biases_regularization=1e-3, l2_weights_regularization=1e-3), trainable_layer=True)
+model.add_layer(cls.ActivationReLU())
+model.add_layer(cls.Layer(64, 10), trainable_layer=True)
 model.add_layer(cls.ActivationSoftmax())
 
 
-model.set(optimizer=cls.optimizer_Adam(learning_rate=0.005,decay=5e-4),
+model.set(optimizer=cls.OptimizerAdam(learning_rate=0.005, decay=5e-4),
           loss=cls.CategoricalCrossEntropyLossFunction(),
           loss_softmax_merge=cls.CategoricalCrossEntropySoftmaxActivation()
-)
+          )
 
 print("Model started training")
 

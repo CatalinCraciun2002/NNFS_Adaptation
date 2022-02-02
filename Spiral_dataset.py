@@ -7,14 +7,14 @@ X,Y = spiral_data(1000, 3)
 
 model = model.Model()
 
-model.add_layer(cls.layer(2,512,l2_biases_regularization=5e-4, l2_weights_regularization= 5e-4),trainable_layer=True)
-model.add_layer(cls.activation_ReLU())
+model.add_layer(cls.Layer(2, 512, l2_biases_regularization=5e-4, l2_weights_regularization= 5e-4), trainable_layer=True)
+model.add_layer(cls.ActivationReLU())
 #model.add_layer(cls.layer(128,64,l2_biases_regularization=5e-4, l2_weights_regularization= 5e-4),trainable_layer=True)
 #model.add_layer(cls.activation_ReLU())
-model.add_layer(cls.layer(512,3),trainable_layer=True)
+model.add_layer(cls.Layer(512, 3), trainable_layer=True)
 model.add_layer(cls.ActivationSoftmax())
 
-model.set(optimizer=cls.optimizer_Adam(0.02, decay=5e-4, beta_2=0.999),
+model.set(optimizer=cls.OptimizerAdam(0.02, decay=5e-4, beta_2=0.999),
           loss= cls.CategoricalCrossEntropyLossFunction(),
           accuracy=cls.AccuracyCrossEntropy(),
           loss_softmax_merge=cls.CategoricalCrossEntropySoftmaxActivation())

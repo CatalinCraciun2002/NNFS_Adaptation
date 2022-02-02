@@ -10,11 +10,11 @@ x = [
 
 dataset = (100 * np.random.randn(100005,100,1)) % 6 -3
 
-layer1 = cls.layer(1 ,64)
+layer1 = cls.Layer(1, 64)
 
-activation1 = cls.activation_ReLU()
+activation1 = cls.ActivationReLU()
 
-layer2 = cls.layer(64, 1)
+layer2 = cls.Layer(64, 1)
 
 #activation2 = cls.activation_ReLU()
 
@@ -24,9 +24,9 @@ layer2 = cls.layer(64, 1)
 
 #layer4 = cls.layer(64,1)
 
-loss = cls.loss_mean_squared_error()
+loss = cls.LossMeanSquaredError()
 
-optimizer = cls.optimizer_Adam(learning_rate= 0.001,decay=1e-3, beta_1= 0.9 , beta_2= 0.999)
+optimizer = cls.OptimizerAdam(learning_rate= 0.001, decay=1e-3, beta_1= 0.9, beta_2= 0.999)
 
 #optimizer = cls.optimizer_SGD_momentum(learning_rate=0.05, decay=1e-1, momentum= 0.7)
 

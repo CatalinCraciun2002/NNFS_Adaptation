@@ -56,19 +56,19 @@ class Model:
         return self.layers[nr_of_layers-1].outputs
 
 
-    def backward(self, outputs, y):
+    def backward(self, predictions, y):
 
         nr_of_layers = len(self.layers)
 
         if self.loss_softmax_merge is not None:
 
-            self.loss_softmax_merge.backward(outputs, y)
+            self.loss_softmax_merge.backward(predictions, y)
 
             self.layers[nr_of_layers-1].dinputs = self.loss_softmax_merge.dinputs
 
         else:
 
-            self.loss.backward(outputs, y)
+            self.loss.backward(predictions, y)
 
             self.layers[nr_of_layers-1].backward(self.loss.dinputs)
 
