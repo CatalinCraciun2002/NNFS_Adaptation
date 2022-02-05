@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
-import classes_file as cls
+import classes_file
 
 x = np.array([
     [1,-2,3],
@@ -24,7 +24,6 @@ loss.forward(x[0],x[1])
 
 loss.backward()
 
-'''
 #dataset = np.random.randn(10,10,1)
 
 #print(dataset)
@@ -36,5 +35,31 @@ print(x.reshape(9))
 
 plt.plot(test,np.sin(test))
 
-plt.show()
+'''
 
+class JustAClass:
+
+    def __init__(self, val):
+
+        self.val= val
+
+    def change_val(self):
+
+        self.val = "change"
+        print("done")
+
+
+def function(class_val, change_function):
+
+    change_function()
+
+    print(class_val[0])
+
+
+
+cls = JustAClass("original")
+
+function([cls.val], cls.change_val)
+
+for i in range(0,1):
+    print(i)

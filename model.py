@@ -41,8 +41,6 @@ class Model:
         return X_final, Y_final
 
 
-
-
     def forward(self, inputs): #pass through all layers except loss
 
         nr_of_layers = len(self.layers)

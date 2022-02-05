@@ -3,15 +3,12 @@ import numpy as np
 
 class Layer:
 
-    def __init__(self, n_inputs, n_neurons, l2_weights_regularization=0, l2_biases_regularization=0, has_RNN=False):
+    def __init__(self, n_inputs, n_neurons, l2_weights_regularization=0, l2_biases_regularization=0):
 
-        self.weights = 0.1 * np.random.randn(n_inputs, n_neurons)
+        self.weights = 0.01 * np.random.randn(n_inputs, n_neurons)
         self.biases = np.zeros((1, n_neurons))
         self.l2_weights_regularization = l2_weights_regularization
         self.l2_biases_regularization = l2_biases_regularization
-
-        if has_RNN:
-            self.weights_h = np.random.randn(n_neurons, n_neurons)
 
     def forward(self, inputs):
 
@@ -42,6 +39,72 @@ class Layer:
         self.dbiases = dbiases
 
         self.dweights_h = dweights_h
+
+
+class RNNLayer(Layer):
+
+    def __init__(self, n_inputs, n_neurons, memory_duration, activation, l2_weights_regularization=0, l2_biases_regularization=0):
+
+        self.weights = 0.01 * np.random.randn(n_inputs, n_neurons)
+        self.biases = np.zeros((1, n_neurons))
+        self.l2_weights_regularization = l2_weights_regularization
+        self.l2_biases_regularization = l2_biases_regularization
+
+        self.activation = activation
+        self.weights_h = 0.01 * np.random.randn(n_neurons, n_neurons)
+        self.memory = []
+        self.memory_duration = memory_duration
+
+
+    def forward_RNN(self, inputs, empty_memory=False):
+
+        if not self.memory:
+            self.memory.append(np.zeros((len(inputs[0]), len(self.weights_h))))
+
+        for i in range(0, self.memory_duration):
+            self.forward(inputs[i])
+            self.outputs += np.dot(self.memory[i], self.weights_h)
+
+            self.activation.forward(self.outputs)
+            self.memory.append(self.activation.outputs)
+
+        self.outputs = self.activation.outputs
+
+        if empty_memory:
+            del self.memory[1:]
+
+    def backward_RNN(self, dvalues, X):
+
+        self.activation.backward(dvalues)
+        dvalues = self.activation.dinputs
+
+        self.backward(dvalues)
+
+        dweights_h = np.dot((self.memory[self.memory_duration - 1]).T, dvalues)
+        dweights = self.dweights
+        dbiases = self.dbiases
+
+        i = self.memory_duration - 1
+
+        while i > 0:
+            dvalues = np.dot(dvalues, self.weights_h.T)
+
+            self.activation.outputs = self.memory[i]
+            self.activation.backward(dvalues)
+            dvalues = self.activation.dinputs
+
+            self.inputs = X[i - 1]
+            self.backward(dvalues)
+
+            dweights_h += np.dot((self.memory[i - 1]).T, dvalues)
+            dweights += self.dweights
+            dbiases += self.dbiases
+
+            i -= 1
+
+        self.set_gradients(dweights, dbiases, dweights_h)
+
+        del self.memory[1:]
 
 
 class AccuracyCrossEntropy:
@@ -196,15 +259,25 @@ class OptimizerAdam:
             if not hasattr(layer, 'weight_h_cache'):
                 layer.weights_h_momentum = np.zeros_like(layer.weights_h)
                 layer.weights_h_cache = np.zeros_like(layer.weights_h)
+                layer.bias_h_momentum = np.zeros_like(layer.biases)
+                # layer.bias_h_cache = np.zeros_like(layer.biases)
 
             layer.weights_h_momentum = self.beta_1 * layer.weights_h_momentum + (1 - self.beta_1) * layer.dweights_h
+            # layer.bias_h_momentum = self.beta_1 * layer.bias_h_momentum + (1 - self.beta_1) * layer.dbiases_h
+
             weights_h_momentum_corrected = layer.weights_h_momentum / (1 - self.beta_1 ** (self.iterations + 1))
+            # bias_h_momentum_corrected = layer.bias_h_momentum / (1 - self.beta_1 ** (self.iterations + 1))
 
             layer.weights_h_cache = self.beta_2 * layer.weights_h_cache + (1 - self.beta_2) * layer.dweights_h ** 2
+            # layer.bias_h_cache = self.beta_2 * layer.bias_h_cache + (1 - self.beta_2) * layer.dbiases_h ** 2
+
             weights_h_cache_corrected = layer.weights_h_cache / (1 - self.beta_2 ** (self.iterations + 1))
+            # bias_h_cache_corrected = layer.bias_h_cache / (1 - self.beta_2 ** (self.iterations + 1))
+
             layer.weights_h += -self.current_learning_rate * weights_h_momentum_corrected / (
                     np.sqrt(weights_h_cache_corrected) + self.epsilon)
-
+            # layer.biases_h += -self.current_learning_rate * bias_h_momentum_corrected / \
+            #               (np.sqrt(bias_h_cache_corrected) + self.epsilon)
 
         weight_momentum_corrected = layer.weight_momentum / (1 - self.beta_1 ** (self.iterations + 1))
         bias_momentum_corrected = layer.bias_momentum / (1 - self.beta_1 ** (self.iterations + 1))
@@ -289,3 +362,53 @@ class ActivationSoftmax:
         exp_value = np.exp(exp_value)
 
         self.outputs = exp_value / np.sum(exp_value, axis=1, keepdims=1)
+
+
+class GradientChecker:
+
+    def __init__(self, epsilon=1e-4):
+        self.epsilon = epsilon
+
+    def check_weights_h(self, layer, loss, forward, backward, X, Y, memory_duration=1, print_out=True):
+
+        forward(memory_duration, X, Y)
+        backward(memory_duration, Y)
+
+        derivative = layer.dweights_h[0][0]
+
+        layer.weights_h[0][0] += self.epsilon
+        forward(memory_duration, X, Y, empty_memory=True)
+
+        result_epsilon_plus = loss.outputs
+
+        layer.weights_h[0][0] -= 2 * self.epsilon
+        forward(memory_duration, X, Y, empty_memory=True)
+
+        result_epsilon_minus = loss.outputs
+
+        if (print_out):
+            print(derivative, np.average((result_epsilon_plus - result_epsilon_minus) / (2 * self.epsilon)))
+
+        layer.weights_h[0][0] += self.epsilon
+
+    def check_weights(self, layer, loss, forward, backward, X, Y, memory_duration=1, print_out=True):
+
+        forward(memory_duration, X, Y)
+        backward(memory_duration, Y)
+
+        derivative = layer.dweights[0][0]
+
+        layer.weights[0][0] += self.epsilon
+        forward(memory_duration, X, Y, empty_memory=True)
+
+        result_epsilon_plus = loss.outputs
+
+        layer.weights[0][0] -= 2 * self.epsilon
+        forward(memory_duration, X, Y, empty_memory=True)
+
+        result_epsilon_minus = loss.outputs
+
+        if print_out:
+            print(derivative, np.average((result_epsilon_plus - result_epsilon_minus) / (2 * self.epsilon)))
+
+        layer.weights[0][0] += self.epsilon
