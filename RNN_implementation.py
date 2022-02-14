@@ -1,16 +1,15 @@
 import classes_file as cls
 import numpy as np
 
-
 epochs = 1000
 batch_size = 16
-memory_duration = 3
+memory_duration = 4
 layer1_neurons = 16
 
 int2binary = {}
 binary_dim = 8
 
-optimizer = cls.OptimizerAdam(learning_rate=0.1, decay=1e-5)
+optimizer = cls.OptimizerAdam(learning_rate=0.01, decay=1e-5)
 
 largest_number = pow(2, binary_dim)
 
@@ -51,32 +50,35 @@ for nr in range(0, epochs):
 X = np.array(X)
 Y = np.array(Y)
 
-layer1 = cls.RNNLayer(2, layer1_neurons, activation=cls.ActivationSigmoid(), memory_duration=memory_duration)
+layer1 = cls.LstmLayer(2, layer1_neurons, activation=cls.ActivationLstmCell(memory_duration), memory_duration=memory_duration)
+#layer1 = cls.RNNLayer(2, layer1_neurons, activation=cls.ActivationTanh(), memory_duration=memory_duration)
 
 layer2 = cls.Layer(layer1_neurons, 1)
 activation2 = cls.ActivationSigmoid()
 loss = cls.LossMeanSquaredError()
 
-def forward(memory_duration, X_current, Y_current, empty_memory=False):
 
-    layer1.forward_RNN(X_current,empty_memory=empty_memory)
+def forward(memory_duration, X_current, Y_current, empty_memory=False, add_epsilon=False, epsilon=0):
+
+    layer1.forward_RNN(X_current,empty_memory=empty_memory, add_epsilon=add_epsilon, epsilon=epsilon)
     layer2.forward(layer1.outputs)
     activation2.forward(layer2.outputs)
     loss.forward(activation2.outputs, Y_current[memory_duration-1])
 
-def backward(memory_duration, Y_current):
+def backward(memory_duration, X_current, Y_current):
 
     loss.backward(activation2.outputs, Y_current[memory_duration - 1])
     activation2.backward(loss.dinputs)
     layer2.backward(activation2.dinputs)
-    layer1.backward_RNN(layer2.dinputs, X[epoch])
+    layer1.backward_RNN(layer2.dinputs, X_current)
 
+    return layer1.deposit
 
 checker = cls.GradientChecker()
 
 for epoch_fin in range(0, epochs*100):
 
-    epoch = 0
+    epoch = epoch_fin %epochs
 
     memory = [np.zeros((batch_size, layer1_neurons))]
 
@@ -84,14 +86,26 @@ for epoch_fin in range(0, epochs*100):
     Y_current = Y[epoch]
 
     forward(memory_duration, X_current, Y_current)
-    backward(memory_duration, Y_current)
+    backward(memory_duration, X_current, Y_current)
 
-    #checker.check_weights_h(layer=layer1, loss=loss, forward=forward_legacy, backward=backward_legacy, X=X_current, Y=Y_current,
-     #                  memory=memory,  memory_duration=memory_duration, print_out=True)
+    checker.check_custom(loss=loss, forward=forward, backward=backward, X=X_current, Y=Y_current,
+                          memory_duration=memory_duration, print_out=True)
 
+    checker.check_weights(layer1, loss=loss, forward=forward, backward=backward, X=X_current, Y=Y_current,
+                          memory_duration=memory_duration, print_out=True)
+
+
+    print(" ")
 
     optimizer.pre_update_params()
     optimizer.update_params(layer2)
     optimizer.update_params(layer1)
 
     print("Loss is: ", np.average(loss.outputs))
+
+    if  checker.derivative > 1:
+       print("say fuck")
+
+
+    if epoch_fin % 10000 == 9999:
+        exit()

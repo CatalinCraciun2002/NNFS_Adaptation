@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
-import classes_file
+#import classes_file
 
 x = np.array([
     [1,-2,3],
@@ -35,7 +35,7 @@ print(x.reshape(9))
 
 plt.plot(test,np.sin(test))
 
-'''
+
 
 class JustAClass:
 
@@ -60,6 +60,8 @@ def function(class_val, change_function):
 cls = JustAClass("original")
 
 function([cls.val], cls.change_val)
+'''
 
-for i in range(0,1):
+
+for i in range(1,0,-1):
     print(i)

@@ -56,27 +56,37 @@ class RNNLayer(Layer):
         self.memory_duration = memory_duration
 
 
-    def forward_RNN(self, inputs, empty_memory=False):
+    def forward_RNN(self, inputs, empty_memory=False, add_epsilon=False, epsilon =0):
 
         if not self.memory:
             self.memory.append(np.zeros((len(inputs[0]), len(self.weights_h))))
 
+        if add_epsilon:
+            self.weights[0][0] += epsilon
+
         for i in range(0, self.memory_duration):
+
             self.forward(inputs[i])
             self.outputs += np.dot(self.memory[i], self.weights_h)
 
             self.activation.forward(self.outputs)
             self.memory.append(self.activation.outputs)
 
+        if add_epsilon:
+            self.weights[0][0] -= epsilon
+
         self.outputs = self.activation.outputs
 
         if empty_memory:
             del self.memory[1:]
+            if hasattr( self.activation, 'cell_states'):
+                del  self.activation.cell_states[1:]
 
     def backward_RNN(self, dvalues, X):
 
         self.activation.backward(dvalues)
         dvalues = self.activation.dinputs
+
 
         self.backward(dvalues)
 
@@ -103,8 +113,50 @@ class RNNLayer(Layer):
             i -= 1
 
         self.set_gradients(dweights, dbiases, dweights_h)
+        self.deposit = dweights[0][0]
 
         del self.memory[1:]
+
+
+class LstmLayer(RNNLayer):
+
+    def backward_RNN(self, dvalues, X):
+
+        self.activation.backward(dvalues, self.weights_h)
+        dvalues = self.activation.dmemory[1]
+
+
+        self.backward(dvalues)
+
+        dweights_h = np.dot((self.memory[self.memory_duration - 1]).T, dvalues)
+        dweights = self.dweights
+        dbiases = self.dbiases
+
+
+        i = self.memory_duration - 1
+
+        while i > 0:
+
+            dvalues = np.dot(dvalues, self.weights_h.T)
+            dvalues *= self.activation.dmemory[self.memory_duration - i + 1]
+
+            self.inputs = X[i - 1]
+            self.backward(dvalues)
+
+            dweights_h += np.dot((self.memory[i - 1]).T, dvalues)
+            dweights += self.dweights
+            dbiases += self.dbiases
+
+            i -= 1
+
+        self.set_gradients(dweights, dbiases, dweights_h)
+        self.deposit = dweights[0][0]
+
+
+        del self.memory[1:]
+        del self.activation.cell_states[1:]
+        self.activation.dmemory.clear()
+        self.activation.dstate.clear()
 
 
 class AccuracyCrossEntropy:
@@ -120,7 +172,7 @@ class AccuracyCrossEntropy:
         counter = 0
 
         for i in predictions:
-            if (predictions[i] == targets[i]):
+            if predictions[i] == targets[i]:
                 counter += 1
 
         return counter / total
@@ -140,7 +192,7 @@ class ActivationReLU:
 
         for i in range(len(dvalues)):
             for j in range(len(dvalues[i])):
-                if (self.inputs[i][j] < 0):
+                if self.inputs[i][j] < 0:
                     self.dinputs[i][j] = 0
 
 
@@ -155,7 +207,101 @@ class ActivationSigmoid:
         self.dinputs = self.outputs * (1 - self.outputs) * dvalues
 
 
-class CustomLossAbs:
+class ActivationTanh:
+
+    def forward(self, inputs):
+        self.inputs = inputs
+
+        plus_e = np.exp(inputs)
+        minus_e = np.exp(-inputs)
+
+        self.outputs = (plus_e - minus_e) / (plus_e + minus_e)
+
+        if np.isnan(np.average(self.outputs)):
+            return
+
+    def backward(self, dvalues):
+
+        self.dinputs = ( 1- np.square(self.outputs) ) * dvalues
+
+class ActivationLstmCell:
+
+    def __init__(self, memory_duration):
+        self.activation_tanh = ActivationTanh()
+        self.activation_sig = ActivationSigmoid()
+        self.memory_duration = memory_duration
+
+        self.inputs_through_time= []
+        self.cell_states = []
+
+    def forward(self, inputs):
+
+        if not self.cell_states:
+            self.cell_states.append(np.zeros_like(inputs))
+
+        self.inputs_through_time.append(inputs)
+
+        self.activation_sig.forward(inputs)
+        forget_gate = self.activation_sig.outputs
+
+        input_gate = forget_gate
+
+        self.activation_tanh.forward(inputs)
+        new_memory = self.activation_tanh.outputs
+        new_memory *= input_gate
+
+        current_state = np.copy(self.cell_states[-1])
+        current_state *= forget_gate
+        current_state += new_memory
+
+        self.cell_states.append(current_state)
+        candidate = forget_gate
+
+        self.activation_tanh.forward(current_state)
+        self.outputs = candidate * self.activation_tanh.outputs
+
+
+    def backward(self, dvalue, weights_h):
+
+        self.dstate = [np.zeros_like(dvalue)]
+        self.dmemory = [dvalue]
+
+        for i in range(0, self.memory_duration):
+
+            out_current = self.inputs_through_time[self.memory_duration - i - 1]
+            state_current = self.cell_states[self.memory_duration - i]
+
+            dmemory_current = self.dmemory[i]
+
+            if i != 0:
+                dmemory_current = np.dot(dmemory_current, weights_h.T)
+
+            self.activation_tanh.outputs = state_current
+            self.activation_sig.forward(out_current)
+            self.activation_tanh.backward(self.activation_sig.outputs)
+
+            dstate_current = self.activation_tanh.dinputs * dmemory_current + self.dstate[i]
+
+            self.activation_tanh.forward(state_current)
+            dcandidate = self.activation_tanh.outputs * dmemory_current
+
+            self.activation_sig.forward(out_current)
+            dnew_memory = self.activation_sig.outputs * dstate_current
+
+            self.activation_tanh.forward(out_current)
+            dinput_gate = self.activation_tanh.outputs * dstate_current
+
+            dforget_gate = self.cell_states[self.memory_duration- i -1] * dstate_current
+
+            dstate_next = self.activation_sig.outputs * dstate_current
+            self.dstate.append(dstate_next)
+
+            dout_next = (dcandidate + dnew_memory + dinput_gate + dforget_gate)
+            self.dmemory.append(dout_next)
+
+        self.inputs_through_time.clear()
+
+class LossAbs:
 
     def forward(self, inputs, targets):
 
@@ -366,35 +512,31 @@ class ActivationSoftmax:
 
 class GradientChecker:
 
-    def __init__(self, epsilon=1e-4):
+    def __init__(self, epsilon=1e-12):
         self.epsilon = epsilon
+        self.derivative = 0
 
-    def check_weights_h(self, layer, loss, forward, backward, X, Y, memory_duration=1, print_out=True):
+    def check_custom(self, loss, forward, backward, X, Y, memory_duration=1, print_out=True):
 
         forward(memory_duration, X, Y)
-        backward(memory_duration, Y)
+        self.derivative = backward(memory_duration, X, Y)
 
-        derivative = layer.dweights_h[0][0]
-
-        layer.weights_h[0][0] += self.epsilon
-        forward(memory_duration, X, Y, empty_memory=True)
+        forward(memory_duration, X, Y, empty_memory=True, add_epsilon=True, epsilon=self.epsilon)
 
         result_epsilon_plus = loss.outputs
 
-        layer.weights_h[0][0] -= 2 * self.epsilon
-        forward(memory_duration, X, Y, empty_memory=True)
+        forward(memory_duration, X, Y, empty_memory=True, add_epsilon=True, epsilon=-self.epsilon)
 
         result_epsilon_minus = loss.outputs
 
         if (print_out):
-            print(derivative, np.average((result_epsilon_plus - result_epsilon_minus) / (2 * self.epsilon)))
+            print(self.derivative, np.average((result_epsilon_plus - result_epsilon_minus) / (2 * self.epsilon)))
 
-        layer.weights_h[0][0] += self.epsilon
 
     def check_weights(self, layer, loss, forward, backward, X, Y, memory_duration=1, print_out=True):
 
         forward(memory_duration, X, Y)
-        backward(memory_duration, Y)
+        backward(memory_duration, X, Y)
 
         derivative = layer.dweights[0][0]
 
