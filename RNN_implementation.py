@@ -1,15 +1,17 @@
 import classes_file as cls
+import classes_RNN as rnn
 import numpy as np
 
 epochs = 1000
 batch_size = 16
-memory_duration = 4
+memory_duration = 1
 layer1_neurons = 16
 
 int2binary = {}
 binary_dim = 8
 
-optimizer = cls.OptimizerAdam(learning_rate=0.01, decay=1e-5)
+optimizerLstm = rnn.OptimizerAdamLstm(learning_rate=0.01, decay=1e-5)
+simple_optimizer = cls.OptimizerAdam(learning_rate=0.01, decay=1e-5)
 
 largest_number = pow(2, binary_dim)
 
@@ -50,7 +52,7 @@ for nr in range(0, epochs):
 X = np.array(X)
 Y = np.array(Y)
 
-layer1 = cls.LstmLayer(2, layer1_neurons, activation=cls.ActivationLstmCell(memory_duration), memory_duration=memory_duration)
+layer1 = rnn.LstmLayer(2, layer1_neurons, memory_duration=memory_duration)
 #layer1 = cls.RNNLayer(2, layer1_neurons, activation=cls.ActivationTanh(), memory_duration=memory_duration)
 
 layer2 = cls.Layer(layer1_neurons, 1)
@@ -60,7 +62,7 @@ loss = cls.LossMeanSquaredError()
 
 def forward(memory_duration, X_current, Y_current, empty_memory=False, add_epsilon=False, epsilon=0):
 
-    layer1.forward_RNN(X_current,empty_memory=empty_memory, add_epsilon=add_epsilon, epsilon=epsilon)
+    layer1.forward_through_time(X_current,empty_memory=empty_memory, add_epsilon=add_epsilon, epsilon=epsilon)
     layer2.forward(layer1.outputs)
     activation2.forward(layer2.outputs)
     loss.forward(activation2.outputs, Y_current[memory_duration-1])
@@ -70,7 +72,7 @@ def backward(memory_duration, X_current, Y_current):
     loss.backward(activation2.outputs, Y_current[memory_duration - 1])
     activation2.backward(loss.dinputs)
     layer2.backward(activation2.dinputs)
-    layer1.backward_RNN(layer2.dinputs, X_current)
+    layer1.backward_through_time(layer2.dinputs, X_current)
 
     return layer1.deposit
 
@@ -88,18 +90,15 @@ for epoch_fin in range(0, epochs*100):
     forward(memory_duration, X_current, Y_current)
     backward(memory_duration, X_current, Y_current)
 
-    checker.check_custom(loss=loss, forward=forward, backward=backward, X=X_current, Y=Y_current,
+    checker.check_attribute(attribute= "weights",layer=layer1, loss=loss, forward=forward, backward=backward, X=X_current, Y=Y_current,
                           memory_duration=memory_duration, print_out=True)
-
-    checker.check_weights(layer1, loss=loss, forward=forward, backward=backward, X=X_current, Y=Y_current,
-                          memory_duration=memory_duration, print_out=True)
-
 
     print(" ")
 
-    optimizer.pre_update_params()
-    optimizer.update_params(layer2)
-    optimizer.update_params(layer1)
+    optimizerLstm.pre_update_params()
+    simple_optimizer.pre_update_params()
+    optimizerLstm.update_params(layer1)
+    simple_optimizer.update_params(layer2)
 
     print("Loss is: ", np.average(loss.outputs))
 

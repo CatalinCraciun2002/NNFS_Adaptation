@@ -1,6 +1,5 @@
 import numpy as np
 
-
 class Layer:
 
     def __init__(self, n_inputs, n_neurons, l2_weights_regularization=0, l2_biases_regularization=0):
@@ -9,6 +8,9 @@ class Layer:
         self.biases = np.zeros((1, n_neurons))
         self.l2_weights_regularization = l2_weights_regularization
         self.l2_biases_regularization = l2_biases_regularization
+
+        self.dweights = np.zeros_like(self.weights)
+        self.dbiases = np.zeros_like(self.biases)
 
     def forward(self, inputs):
 
@@ -31,132 +33,6 @@ class Layer:
 
         if (self.l2_biases_regularization != 0):
             self.dbiases += 2 * self.l2_biases_regularization * self.biases
-
-    def set_gradients(self, dweights, dbiases, dweights_h):
-
-        self.dweights = dweights
-
-        self.dbiases = dbiases
-
-        self.dweights_h = dweights_h
-
-
-class RNNLayer(Layer):
-
-    def __init__(self, n_inputs, n_neurons, memory_duration, activation, l2_weights_regularization=0, l2_biases_regularization=0):
-
-        self.weights = 0.01 * np.random.randn(n_inputs, n_neurons)
-        self.biases = np.zeros((1, n_neurons))
-        self.l2_weights_regularization = l2_weights_regularization
-        self.l2_biases_regularization = l2_biases_regularization
-
-        self.activation = activation
-        self.weights_h = 0.01 * np.random.randn(n_neurons, n_neurons)
-        self.memory = []
-        self.memory_duration = memory_duration
-
-
-    def forward_RNN(self, inputs, empty_memory=False, add_epsilon=False, epsilon =0):
-
-        if not self.memory:
-            self.memory.append(np.zeros((len(inputs[0]), len(self.weights_h))))
-
-        if add_epsilon:
-            self.weights[0][0] += epsilon
-
-        for i in range(0, self.memory_duration):
-
-            self.forward(inputs[i])
-            self.outputs += np.dot(self.memory[i], self.weights_h)
-
-            self.activation.forward(self.outputs)
-            self.memory.append(self.activation.outputs)
-
-        if add_epsilon:
-            self.weights[0][0] -= epsilon
-
-        self.outputs = self.activation.outputs
-
-        if empty_memory:
-            del self.memory[1:]
-            if hasattr( self.activation, 'cell_states'):
-                del  self.activation.cell_states[1:]
-
-    def backward_RNN(self, dvalues, X):
-
-        self.activation.backward(dvalues)
-        dvalues = self.activation.dinputs
-
-
-        self.backward(dvalues)
-
-        dweights_h = np.dot((self.memory[self.memory_duration - 1]).T, dvalues)
-        dweights = self.dweights
-        dbiases = self.dbiases
-
-        i = self.memory_duration - 1
-
-        while i > 0:
-            dvalues = np.dot(dvalues, self.weights_h.T)
-
-            self.activation.outputs = self.memory[i]
-            self.activation.backward(dvalues)
-            dvalues = self.activation.dinputs
-
-            self.inputs = X[i - 1]
-            self.backward(dvalues)
-
-            dweights_h += np.dot((self.memory[i - 1]).T, dvalues)
-            dweights += self.dweights
-            dbiases += self.dbiases
-
-            i -= 1
-
-        self.set_gradients(dweights, dbiases, dweights_h)
-        self.deposit = dweights[0][0]
-
-        del self.memory[1:]
-
-
-class LstmLayer(RNNLayer):
-
-    def backward_RNN(self, dvalues, X):
-
-        self.activation.backward(dvalues, self.weights_h)
-        dvalues = self.activation.dmemory[1]
-
-
-        self.backward(dvalues)
-
-        dweights_h = np.dot((self.memory[self.memory_duration - 1]).T, dvalues)
-        dweights = self.dweights
-        dbiases = self.dbiases
-
-
-        i = self.memory_duration - 1
-
-        while i > 0:
-
-            dvalues = np.dot(dvalues, self.weights_h.T)
-            dvalues *= self.activation.dmemory[self.memory_duration - i + 1]
-
-            self.inputs = X[i - 1]
-            self.backward(dvalues)
-
-            dweights_h += np.dot((self.memory[i - 1]).T, dvalues)
-            dweights += self.dweights
-            dbiases += self.dbiases
-
-            i -= 1
-
-        self.set_gradients(dweights, dbiases, dweights_h)
-        self.deposit = dweights[0][0]
-
-
-        del self.memory[1:]
-        del self.activation.cell_states[1:]
-        self.activation.dmemory.clear()
-        self.activation.dstate.clear()
 
 
 class AccuracyCrossEntropy:
@@ -221,85 +97,8 @@ class ActivationTanh:
             return
 
     def backward(self, dvalues):
+        self.dinputs = (1 - np.square(self.outputs)) * dvalues
 
-        self.dinputs = ( 1- np.square(self.outputs) ) * dvalues
-
-class ActivationLstmCell:
-
-    def __init__(self, memory_duration):
-        self.activation_tanh = ActivationTanh()
-        self.activation_sig = ActivationSigmoid()
-        self.memory_duration = memory_duration
-
-        self.inputs_through_time= []
-        self.cell_states = []
-
-    def forward(self, inputs):
-
-        if not self.cell_states:
-            self.cell_states.append(np.zeros_like(inputs))
-
-        self.inputs_through_time.append(inputs)
-
-        self.activation_sig.forward(inputs)
-        forget_gate = self.activation_sig.outputs
-
-        input_gate = forget_gate
-
-        self.activation_tanh.forward(inputs)
-        new_memory = self.activation_tanh.outputs
-        new_memory *= input_gate
-
-        current_state = np.copy(self.cell_states[-1])
-        current_state *= forget_gate
-        current_state += new_memory
-
-        self.cell_states.append(current_state)
-        candidate = forget_gate
-
-        self.activation_tanh.forward(current_state)
-        self.outputs = candidate * self.activation_tanh.outputs
-
-
-    def backward(self, dvalue, weights_h):
-
-        self.dstate = [np.zeros_like(dvalue)]
-        self.dmemory = [dvalue]
-
-        for i in range(0, self.memory_duration):
-
-            out_current = self.inputs_through_time[self.memory_duration - i - 1]
-            state_current = self.cell_states[self.memory_duration - i]
-
-            dmemory_current = self.dmemory[i]
-
-            if i != 0:
-                dmemory_current = np.dot(dmemory_current, weights_h.T)
-
-            self.activation_tanh.outputs = state_current
-            self.activation_sig.forward(out_current)
-            self.activation_tanh.backward(self.activation_sig.outputs)
-
-            dstate_current = self.activation_tanh.dinputs * dmemory_current + self.dstate[i]
-
-            self.activation_tanh.forward(state_current)
-            dcandidate = self.activation_tanh.outputs * dmemory_current
-
-            self.activation_sig.forward(out_current)
-            dnew_memory = self.activation_sig.outputs * dstate_current
-
-            self.activation_tanh.forward(out_current)
-            dinput_gate = self.activation_tanh.outputs * dstate_current
-
-            dforget_gate = self.cell_states[self.memory_duration- i -1] * dstate_current
-
-            dstate_next = self.activation_sig.outputs * dstate_current
-            self.dstate.append(dstate_next)
-
-            dout_next = (dcandidate + dnew_memory + dinput_gate + dforget_gate)
-            self.dmemory.append(dout_next)
-
-        self.inputs_through_time.clear()
 
 class LossAbs:
 
@@ -314,7 +113,7 @@ class LossAbs:
         self.dinputs = []
 
         for i, j in zip(self.inputs, self.targets):
-            if (i - j > 0):
+            if i - j > 0:
                 self.dinputs.append([1])
             else:
                 self.dinputs.append([-1])
@@ -362,7 +161,7 @@ class OptimizerSgdMomentum:
         self.iteration += 1
 
     def optimize(self, layer):
-        if (not hasattr(layer, 'weights_update')):
+        if not hasattr(layer, 'weights_update'):
             layer.weights_update = np.zeros_like(layer.weights)
             layer.biases_update = np.zeros_like(layer.biases)
 
@@ -401,30 +200,6 @@ class OptimizerAdam:
 
         layer.bias_momentum = self.beta_1 * layer.bias_momentum + (1 - self.beta_1) * layer.dbiases
 
-        if hasattr(layer, 'weights_h'):
-            if not hasattr(layer, 'weight_h_cache'):
-                layer.weights_h_momentum = np.zeros_like(layer.weights_h)
-                layer.weights_h_cache = np.zeros_like(layer.weights_h)
-                layer.bias_h_momentum = np.zeros_like(layer.biases)
-                # layer.bias_h_cache = np.zeros_like(layer.biases)
-
-            layer.weights_h_momentum = self.beta_1 * layer.weights_h_momentum + (1 - self.beta_1) * layer.dweights_h
-            # layer.bias_h_momentum = self.beta_1 * layer.bias_h_momentum + (1 - self.beta_1) * layer.dbiases_h
-
-            weights_h_momentum_corrected = layer.weights_h_momentum / (1 - self.beta_1 ** (self.iterations + 1))
-            # bias_h_momentum_corrected = layer.bias_h_momentum / (1 - self.beta_1 ** (self.iterations + 1))
-
-            layer.weights_h_cache = self.beta_2 * layer.weights_h_cache + (1 - self.beta_2) * layer.dweights_h ** 2
-            # layer.bias_h_cache = self.beta_2 * layer.bias_h_cache + (1 - self.beta_2) * layer.dbiases_h ** 2
-
-            weights_h_cache_corrected = layer.weights_h_cache / (1 - self.beta_2 ** (self.iterations + 1))
-            # bias_h_cache_corrected = layer.bias_h_cache / (1 - self.beta_2 ** (self.iterations + 1))
-
-            layer.weights_h += -self.current_learning_rate * weights_h_momentum_corrected / (
-                    np.sqrt(weights_h_cache_corrected) + self.epsilon)
-            # layer.biases_h += -self.current_learning_rate * bias_h_momentum_corrected / \
-            #               (np.sqrt(bias_h_cache_corrected) + self.epsilon)
-
         weight_momentum_corrected = layer.weight_momentum / (1 - self.beta_1 ** (self.iterations + 1))
         bias_momentum_corrected = layer.bias_momentum / (1 - self.beta_1 ** (self.iterations + 1))
 
@@ -449,8 +224,10 @@ class CategoricalCrossEntropySoftmaxActivation:
 
     def forward(self, inputs, target_values):
 
-        self.predictions = self.activation.forward(inputs)
-        self.output = self.loss.forward(self.predictions, target_values)
+        self.activation.forward(inputs)
+        self.predictions = self.activation.outputs
+        self.loss.forward(self.predictions, target_values)
+        self.output = self.loss.outputs
 
     def backward(self, inputs, target_values):
 
@@ -503,11 +280,11 @@ class ActivationSoftmax:
     def forward(self, inputs):
         exp_value = inputs
 
-        exp_value -= np.max(inputs, axis=1, keepdims=1)
+        exp_value -= np.max(inputs, axis=1, keepdims=True)
 
         exp_value = np.exp(exp_value)
 
-        self.outputs = exp_value / np.sum(exp_value, axis=1, keepdims=1)
+        self.outputs = exp_value / np.sum(exp_value, axis=1, keepdims=True)
 
 
 class GradientChecker:
@@ -532,20 +309,19 @@ class GradientChecker:
         if (print_out):
             print(self.derivative, np.average((result_epsilon_plus - result_epsilon_minus) / (2 * self.epsilon)))
 
-
-    def check_weights(self, layer, loss, forward, backward, X, Y, memory_duration=1, print_out=True):
+    def check_attribute(self,attribute, layer, loss, forward, backward, X, Y, memory_duration=1, print_out=True):
 
         forward(memory_duration, X, Y)
         backward(memory_duration, X, Y)
 
-        derivative = layer.dweights[0][0]
+        derivative = (layer.__getattribute__("d" + attribute))[0][0]
 
-        layer.weights[0][0] += self.epsilon
+        (layer.__getattribute__(attribute))[0][0] += self.epsilon
         forward(memory_duration, X, Y, empty_memory=True)
 
         result_epsilon_plus = loss.outputs
 
-        layer.weights[0][0] -= 2 * self.epsilon
+        (layer.__getattribute__(attribute))[0][0] -= 2 * self.epsilon
         forward(memory_duration, X, Y, empty_memory=True)
 
         result_epsilon_minus = loss.outputs
@@ -553,4 +329,4 @@ class GradientChecker:
         if print_out:
             print(derivative, np.average((result_epsilon_plus - result_epsilon_minus) / (2 * self.epsilon)))
 
-        layer.weights[0][0] += self.epsilon
+        (layer.__getattribute__(attribute))[0][0] += self.epsilon

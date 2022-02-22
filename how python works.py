@@ -12,8 +12,6 @@ for i in range(len(x)):
     for j in range(len(x[i])):
         x[i][j] = max(x[i][j], 0)
 
-
-
 activation = cls.activation_ReLU()
 
 activation.forward(x)
@@ -62,6 +60,17 @@ cls = JustAClass("original")
 function([cls.val], cls.change_val)
 '''
 
+class clasa:
 
-for i in range(1,0,-1):
-    print(i)
+    def __init__(self):
+
+        self.ceva = 5
+
+
+clasa1 = clasa()
+
+var = clasa1.__getattribute__("ceva")
+
+var += 1
+
+print(clasa1.ceva)
