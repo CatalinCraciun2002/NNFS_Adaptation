@@ -1,9 +1,13 @@
 import numpy as np
 
+
 class Layer:
 
     def __init__(self, n_inputs, n_neurons, l2_weights_regularization=0, l2_biases_regularization=0):
 
+        self.inputs = None
+        self.outputs = None
+        self.dinputs = None
         self.weights = 0.01 * np.random.randn(n_inputs, n_neurons)
         self.biases = np.zeros((1, n_neurons))
         self.l2_weights_regularization = l2_weights_regularization
@@ -28,10 +32,10 @@ class Layer:
 
         self.dbiases = np.sum(dvalues, axis=0, keepdims=True)
 
-        if (self.l2_weights_regularization != 0):
+        if self.l2_weights_regularization != 0:
             self.dweights += 2 * self.l2_weights_regularization * self.weights
 
-        if (self.l2_biases_regularization != 0):
+        if self.l2_biases_regularization != 0:
             self.dbiases += 2 * self.l2_biases_regularization * self.biases
 
 
@@ -56,6 +60,11 @@ class AccuracyCrossEntropy:
 
 class ActivationReLU:
 
+    def __init__(self):
+        self.inputs = None
+        self.outputs = None
+        self.dinputs = None
+
     def forward(self, inputs):
 
         self.inputs = inputs
@@ -74,6 +83,11 @@ class ActivationReLU:
 
 class ActivationSigmoid:
 
+    def __init__(self):
+        self.inputs = None
+        self.outputs = None
+        self.dinputs = None
+
     def forward(self, inputs):
         self.inputs = inputs
 
@@ -84,6 +98,11 @@ class ActivationSigmoid:
 
 
 class ActivationTanh:
+
+    def __init__(self):
+        self.inputs = None
+        self.outputs = None
+        self.dinputs = None
 
     def forward(self, inputs):
         self.inputs = inputs
@@ -100,7 +119,26 @@ class ActivationTanh:
         self.dinputs = (1 - np.square(self.outputs)) * dvalues
 
 
+class ActivationLinear:
+
+    def __init__(self):
+        self.dinputs = None
+        self.outputs = None
+
+    def forward(self, inputs):
+        self.outputs = inputs
+
+    def backward(self, dvalues):
+        self.dinputs = dvalues
+
+
 class LossAbs:
+
+    def __init__(self):
+        self.targets = None
+        self.inputs = None
+        self.outputs = None
+        self.dinputs = None
 
     def forward(self, inputs, targets):
 
@@ -124,6 +162,10 @@ class LossAbs:
 
 
 class LossMeanSquaredError:
+
+    def __init__(self):
+        self.dinputs = None
+        self.outputs = None
 
     def forward(self, inputs, targets):
 
@@ -219,6 +261,7 @@ class CategoricalCrossEntropySoftmaxActivation:
 
     def __init__(self):
 
+        self.dinputs = None
         self.loss = CategoricalCrossEntropyLossFunction()
         self.activation = ActivationSoftmax()
 
@@ -234,7 +277,7 @@ class CategoricalCrossEntropySoftmaxActivation:
         samples = len(inputs)
 
         if len(target_values.shape) == 2:
-            target_values = np.argmax(target_values, axis=1)
+            target_values = np.argmax(target_values, axis=-1)
 
         self.dinputs = inputs.copy()  # these are the predicted values of the softmax function
 
@@ -246,12 +289,16 @@ class CategoricalCrossEntropySoftmaxActivation:
 
 class CategoricalCrossEntropyLossFunction:
 
+    def __init__(self):
+        self.outputs = None
+
     def forward(self, inputs, target_values):
 
         if len(target_values.shape) == 2:
-            target_values = np.argmax(target_values, axis=1)
+            target_values = np.argmax(target_values, axis=-1)
 
         self.outputs = []
+
 
         for i, j in zip(range(len(inputs)), target_values):
             self.outputs.append(inputs[i][int(j)])
@@ -277,6 +324,9 @@ class CategoricalCrossEntropyLossFunction:
 
 class ActivationSoftmax:
 
+    def __init__(self):
+        self.outputs = None
+
     def forward(self, inputs):
         exp_value = inputs
 
@@ -289,27 +339,29 @@ class ActivationSoftmax:
 
 class GradientChecker:
 
-    def __init__(self, epsilon=1e-12):
+    def __init__(self, epsilon=1e-10):
         self.epsilon = epsilon
         self.derivative = 0
 
     def check_custom(self, loss, forward, backward, X, Y, memory_duration=1, print_out=True):
 
-        forward(memory_duration, X, Y)
-        self.derivative = backward(memory_duration, X, Y)
-
-        forward(memory_duration, X, Y, empty_memory=True, add_epsilon=True, epsilon=self.epsilon)
+        forward(memory_duration, X, Y, add_epsilon=1, epsilon=self.epsilon)
 
         result_epsilon_plus = loss.outputs
 
-        forward(memory_duration, X, Y, empty_memory=True, add_epsilon=True, epsilon=-self.epsilon)
+        forward(memory_duration, X, Y, add_epsilon=1, epsilon=-self.epsilon)
 
         result_epsilon_minus = loss.outputs
 
-        if (print_out):
+        forward(memory_duration, X, Y)
+        self.derivative = backward(memory_duration, X, Y)
+
+        if print_out:
             print(self.derivative, np.average((result_epsilon_plus - result_epsilon_minus) / (2 * self.epsilon)))
 
-    def check_attribute(self,attribute, layer, loss, forward, backward, X, Y, memory_duration=1, print_out=True):
+        return self.derivative, np.average((result_epsilon_plus - result_epsilon_minus) / (2 * self.epsilon))
+
+    def check_attribute(self, attribute, layer, loss, forward, backward, X, Y, memory_duration=1, print_out=True):
 
         forward(memory_duration, X, Y)
         backward(memory_duration, X, Y)
@@ -330,3 +382,5 @@ class GradientChecker:
             print(derivative, np.average((result_epsilon_plus - result_epsilon_minus) / (2 * self.epsilon)))
 
         (layer.__getattribute__(attribute))[0][0] += self.epsilon
+
+#%%

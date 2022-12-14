@@ -1,9 +1,9 @@
 import cv2
 import os
-import classes_file as cls
-import model
-image_data = cv2.imread('fashion_mnist_images/train/7/0002.png',
-cv2.IMREAD_UNCHANGED)
+from NNImplementation import BasicClasses as cls, ModelClassIntegration
+
+image_data = cv2.imread('../fashion_mnist_images/train/7/0002.png',
+                        cv2.IMREAD_UNCHANGED)
 
 import numpy as np
 np.set_printoptions(linewidth=200)
@@ -11,7 +11,7 @@ np.set_printoptions(linewidth=200)
 X_train=[]
 Y_train=[]
 
-for files in os.listdir('fashion_mnist_images/train'):
+for files in os.listdir('../fashion_mnist_images/train'):
     for image in os.listdir('fashion_mnist_images/train/' + files):
         x = np.array(cv2.imread('fashion_mnist_images/train/' + files + '/' + image, cv2.IMREAD_UNCHANGED))
         x = x.reshape(28*28)
@@ -25,7 +25,7 @@ print(np.max(X_train[1]))
 X_test=[]
 Y_test=[]
 
-for files in os.listdir('fashion_mnist_images/test'):
+for files in os.listdir('../fashion_mnist_images/test'):
     for image in os.listdir('fashion_mnist_images/test/' + files):
         x = np.array(cv2.imread('fashion_mnist_images/test/' + files + '/' + image, cv2.IMREAD_UNCHANGED))
         x = x.reshape(28*28)
@@ -59,7 +59,8 @@ model.set(optimizer=cls.OptimizerAdam(learning_rate=0.005, decay=5e-4),
 print("Model started training")
 
 
-model.train(X_train,Y_train,128,1000,print_every=50,X_validation=X_test,Y_validation=Y_test,regulariztion_loss_on=True)
+model.train(X_train, Y_train, 128, 1000, print_every=50, X_validation=X_test, Y_validation=Y_test,
+            regularization_loss_on=True)
 
 
 

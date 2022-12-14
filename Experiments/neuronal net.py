@@ -1,5 +1,5 @@
 import numpy as np
-import classes_file as cls
+from NNImplementation import BasicClasses as cls
 import matplotlib.pyplot as plt
 
 x = [
