@@ -47,7 +47,7 @@ the model because it is fitting to a
 predetermined function.Here are the results:
 
 
-![extracted_feature](Micelanous/kerasPredictionSpiral.png)
+![extracted_feature](Micelanous/kerasPredictionSpiral.png)\
 *The prediction of the keras model vs the ground truth*
 
 ![extracted_feature](Micelanous/CustomModelPrediction.png)\
