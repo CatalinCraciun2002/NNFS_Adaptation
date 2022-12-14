@@ -49,13 +49,12 @@ predetermined function.Here are the results:
 
 ![extracted_feature](Micelanous/kerasPredictionSpiral.png)
 *The predicted classes by the keras model vs the ground truth*
-____
 
 ![extracted_feature](Micelanous/CustomModelPrediction.png)\
 *The predicted classes by the custom made model vs the ground truth*
 
 
-
+____
 
 ### 2.Google stock price for the last 5 years
 
@@ -98,6 +97,7 @@ scope of this project. Despite these limitations, it
 achieves a competitive performances and manages to 
 reproduce the overall shape of the output.
 
+____
 
 ### 3.MNIST Fashion Dataset
 
