@@ -119,18 +119,20 @@ in between and a sigmoid activation function after the
 final layer. The training and validation data consist of
 500 images loaded from each class(from the train folder)
 , which sum up to 5000 total images, of which 4500 for 
-training and 500 for validation.
+training and 500 for validation. In the following image
+the qualitative results of the 2 models can be seen.
 
 ![extracted_feature](Micelanous/FashionMnistComparison.png)
 *White - True label*\
 *Yellow - Keras Model Prediction*\
 *Red - Custom-made Model Prediction*
 
-For testing the model, I load 100 more images from each class
-(this time from the test folder) and then make the predictions 
-for both the custom-made model and the keras. For this task
+For testing the model, 100 more images are loaded from each class
+(this time from the test folder) and then the predictions 
+for both the custom-made model and the keras are made.
+For this task
 the final accuracies are 74.60% for the custom-made 
 model and 82.15% for the keras model, both of which show 
 the capacity of the models to learn relevant information 
 from the data and make competent predictions on the test 
-images. In the image above are shown some of these predictions.
+images.
