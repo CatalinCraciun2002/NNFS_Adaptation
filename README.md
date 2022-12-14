@@ -34,7 +34,7 @@ implemented in this projects among which:
 ### 1. The Spiral Dataset
 
 \
-![extracted_feature](Micelanous/SpiralTrueDataset.png)\
+![extracted_feature](Micelanous/SpiralTrueDataset.PNG)\
 *The true spiral dataset (the form of the full dataset)*
 
 This dataset comprises 3 regions of space that 
