@@ -48,7 +48,7 @@ predetermined function.Here are the results:
 
 
 ![extracted_feature](Micelanous/kerasPredictionSpiral.png)
-*The predicted classes by the keras model vs the ground truth*
+*The prediction of the keras model vs the ground truth*
 
 ![extracted_feature](Micelanous/CustomModelPrediction.png)\
 *The predicted classes by the custom made model vs the ground truth*
