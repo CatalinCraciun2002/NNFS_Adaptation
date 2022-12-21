@@ -17,7 +17,7 @@ implementations with the tensorflow's keras implementations
 of the same classes in order to better interpret the
 qualitative results. \
 Many well known classes from the keras library were
-implemented in this projects among which:
+implemented in this project among which:
 *  Dense, SimpleRNN, Lstm (Layers)
 *  ReLU, Sigmoid, Tanh (Activations)
 *  CategoricalCrossEntropy, MeanSquaredError (Losses)
@@ -47,7 +47,7 @@ predetermined function.Here are the results:
 *The prediction of the keras model vs the ground truth*
 
 ![extracted_feature](Micelanous/CustomModelPrediction.png)\
-*The predicted classes by the custom made model vs the ground truth*
+*The predicted classes by the custom-made model vs the ground truth*
 
 
 ____
@@ -60,7 +60,7 @@ following link :
 [Alphabet Inc. (Yahoo Finance)](https://finance.yahoo.com/quote/GOOG/history/?guccounter=1&guce_referrer=aHR0cHM6Ly93d3cuZ29vZ2xlLmNvbS8&guce_referrer_sig=AQAAADmk2eKXeDpMs22HUR-xgJEm8F7efFPl-96Rc_qg9VCA5PSrssd4Ztze7otzOkYlxxiGahfK2F4R7t0JO9msGBK7_Lz4OFv_UoNlwnKSmtKGbczuc3Xv6EkxudOFvahrEKxy_3MvaBThcqFbzhkSTh1nW502h1-J9hYQW_uGe4ZZ)
 . It represents Alphabet Inc. stock data of the 
 past 5 years (or the last 1256 trading days). Each datapoint is
-comprised of 5 entries: Open, High, Low, Close and Adj. Close
+composed of 5 entries: Open, High, Low, Close and Adj. Close
 , which represent the most relevant metrics of a trading day.\
 ![extracted_feature](Micelanous/StockChart.png)\
 *The 5 entries plotted, making up the stock chart*
@@ -140,6 +140,6 @@ images.
 
 This project was inspired by the Neuronal Networks from
 Scratch in Python Book, written by
-Harrison Kinsley & Daniel Kukieła, which can be
+Harrison Kinsley & Daniel Kukieła, which can 
 be found at the
 link: https://nnfs.io
