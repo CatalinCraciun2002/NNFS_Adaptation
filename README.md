@@ -1,12 +1,8 @@
-# NNFS_Adaptation
+# Neuronal Networks in Python
 
-This is an adaptation of the Neuronal Networks from
-Scratch in Python Book, written by
-Harrison Kinsley & Daniel Kukieła, which can be
-be found at the
-link: https://nnfs.io/. \
-Additionally, this project 
-implements, using only python, deep learning structures which are 
+
+The aim of this project 
+implements, using only python (and numpy), deep learning structures which are 
 being used in time series predictions, such as the SimpleRNN and 
 the LSTM.  
 The code written was tested on 3 different
@@ -89,13 +85,16 @@ Closing price, after being trained the first 4 slices.
 
 
 Here, the performance of the custom-made simpleRNN layer
-suffers from the problem of the vanishing gradient,
+suffers from the problem of balancing the gradient from
+previous time steps,
 showing therefor a visible difference between it and 
 the keras model which mitigates this issue with more
 complex mathematical procedures which are beyond the
 scope of this project. Despite these limitations, it 
 achieves a competitive performances and manages to 
-reproduce the overall shape of the output.
+reproduce the overall shape of the output. A custom-made 
+LSTM cell was also tested on this dataset, but it
+falls short of its keras counterpart.
 
 ____
 
@@ -136,3 +135,11 @@ model and 82.15% for the keras model, both of which show
 the capacity of the models to learn relevant information 
 from the data and make competent predictions on the test 
 images.
+
+## Credits
+
+This project was inspired by the Neuronal Networks from
+Scratch in Python Book, written by
+Harrison Kinsley & Daniel Kukieła, which can be
+be found at the
+link: https://nnfs.io
