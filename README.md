@@ -143,3 +143,6 @@ Scratch in Python Book, written by
 Harrison Kinsley & Daniel Kukieła, which can 
 be found at the
 link: https://nnfs.io
+The stock market data preprocessing was inspired by the 
+code from the following github repository: 
+https://github.com/bnsreenu/python_for_microscopists
