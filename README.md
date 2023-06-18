@@ -1,4 +1,4 @@
-# Neuronal Networks in Python
+# Neural Networks in Python
 
 
 The aim of this project 
@@ -9,10 +9,10 @@ The code written was tested on 3 different
 datasets: MINST_fashion, the closing stock price of
 Google for the last 5 years and the Spiral dataset, provided
 by the nnfs package, used in the book.\
-The aim of making this project was learning fundamental Neuronal
+The aim of making this project was learning fundamental Neural
 Networks and python concepts while getting 
 familiar working with various datasets. \
-In this project I have compared my own neuronal network
+In this project I have compared my own Neural network
 implementations with the tensorflow's keras implementations 
 of the same classes in order to better interpret the
 qualitative results. \
@@ -138,7 +138,7 @@ images.
 
 ## Credits
 
-This project was inspired by the Neuronal Networks from
+This project was inspired by the Neural Networks from
 Scratch in Python Book, written by
 Harrison Kinsley & Daniel Kukieła, which can 
 be found at the
